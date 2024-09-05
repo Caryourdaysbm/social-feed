@@ -1,76 +1,67 @@
-// src/components/Feed.jsx
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import InfiniteScroll from 'react-infinite-scroller';
-import PropTypes from 'prop-types';
+import React, { useState, useEffect } from "react";
+import InfiniteScroll from "react-infinite-scroller";
 
-// Main Feed Component
+// Updated fetch function to get data from a mock API (JSONPlaceholder)
+const fetchItems = async (page) => {
+  const response = await fetch(
+    `https://jsonplaceholder.typicode.com/posts?_page=${page}&_limit=5`
+  );
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+  return response.json();
+};
+
 const Feed = () => {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(1);
+  const [items, setItems] = useState([]); // State to hold the fetched items
+  const [page, setPage] = useState(1); // State to keep track of the current page
+  const [hasMore, setHasMore] = useState(true); // State to check if there are more items to load
+  const [loading, setLoading] = useState(false); // State to handle loading status
 
-  // Fetch posts from the API
-  const fetchPosts = async (pageNumber) => {
+  // Function to load more items on scroll
+  const loadMoreItems = async () => {
+    if (loading) return; // Prevent multiple fetches at once
+
     setLoading(true);
-
     try {
-      const response = await axios.get(
-        `https://jsonplaceholder.typicode.com/posts`,
-        {
-          params: { _page: pageNumber, _limit: 10 },
-        }
-      );
+      const data = await fetchItems(page);
+      setItems((prevItems) => [...prevItems, ...data]);
+      setPage((prevPage) => prevPage + 1);
 
-      // Check if there are more posts to load
-      if (response.data.length === 0) {
+      // Update hasMore based on the length of the returned data
+      if (data.length === 0) {
         setHasMore(false);
-      } else {
-        setPosts((prevPosts) => [...prevPosts, ...response.data]);
-        setPage((prevPage) => prevPage + 1);
       }
     } catch (error) {
-      console.error('Failed to fetch posts:', error);
+      console.error("Error fetching data:", error);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    // Initial load
+    loadMoreItems();
+  }, []);
+
   return (
-    <div className="feed-container">
+    <div className="feed">
       <InfiniteScroll
         pageStart={0}
-        loadMore={fetchPosts}
+        loadMore={loadMoreItems}
         hasMore={hasMore && !loading}
-        loader={<LoadingSpinner key={0} />}
-        threshold={200}
+        loader={<div className="loader" key={0}>Loading ...</div>}
       >
-        {posts.map((post) => (
-          <Post key={post.id} post={post} />
+        {items.map((item, index) => (
+          <div key={`${index}-${item.id}`} className="item">
+            <h4>{item.title}</h4>
+            <p>{item.body}</p>
+          </div>
         ))}
       </InfiniteScroll>
-      {!hasMore && posts.length > 0 && <p className="end-message">No more posts</p>}
     </div>
   );
 };
-
-// Post Component to Display Individual Posts
-const Post = ({ post }) => (
-  <div className="post">
-    <h3>{post.title}</h3>
-    <p>{post.body}</p>
-  </div>
-);
-
-Post.propTypes = {
-  post: PropTypes.shape({
-    title: PropTypes.string.isRequired,
-    body: PropTypes.string.isRequired,
-  }).isRequired,
-};
-
-// Loading Spinner Component
-const LoadingSpinner = () => <div className="loading-spinner">Loading...</div>;
 
 export default Feed;
