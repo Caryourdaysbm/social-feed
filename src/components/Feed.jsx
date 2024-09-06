@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import InfiniteScroll from "react-infinite-scroller";
+import LoadingSpinner from "./loadingSpinner"; // Importing the spinner component
 
 // Updated fetch function to get data from a mock API (JSONPlaceholder)
 const fetchItems = async (page) => {
   const response = await fetch(
-    `https://jsonplaceholder.typicode.com/posts?_page=${page}&_limit=5`
+    `https://jsonplaceholder.typicode.com/posts?_page=${page}&_limit=1`
   );
   if (!response.ok) {
     throw new Error("Network response was not ok");
@@ -17,12 +18,14 @@ const Feed = () => {
   const [page, setPage] = useState(1); // State to keep track of the current page
   const [hasMore, setHasMore] = useState(true); // State to check if there are more items to load
   const [loading, setLoading] = useState(false); // State to handle loading status
+  const [error, setError] = useState(null); // State to handle error messages
 
   // Function to load more items on scroll
   const loadMoreItems = async () => {
     if (loading) return; // Prevent multiple fetches at once
 
     setLoading(true);
+    setError(null); // Reset error state before fetching
     try {
       const data = await fetchItems(page);
       setItems((prevItems) => [...prevItems, ...data]);
@@ -34,6 +37,7 @@ const Feed = () => {
       }
     } catch (error) {
       console.error("Error fetching data:", error);
+      setError("Failed to load data. Please try again.");
       setHasMore(false);
     } finally {
       setLoading(false);
@@ -51,12 +55,17 @@ const Feed = () => {
         pageStart={0}
         loadMore={loadMoreItems}
         hasMore={hasMore && !loading}
-        loader={<div className="loader" key={0}>Loading ...</div>}
+        loader={<LoadingSpinner key={0} />} // Use LoadingSpinner while loading
       >
         {items.map((item, index) => (
-          <div key={`${index}-${item.id}`} className="item">
-            <h4>{item.title}</h4>
-            <p>{item.body}</p>
+          <div
+            key={`${index}-${item.id}`}
+            className="border rounded-md bg-[#e0e0e0] shadow-myShadow mt-60 m-5 md:ml-40 md:mr-40 flex flex-col justify-center align-middle p-12 pl-6 pr-6  md:pl-40 md:pr-40"
+          >
+            <h4 className="font-bold text-center">{item.title}</h4>
+            <p className="text-center">{item.body}</p>
+            
+
           </div>
         ))}
       </InfiniteScroll>
